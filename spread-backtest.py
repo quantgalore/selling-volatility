@@ -15,8 +15,6 @@ import matplotlib.pyplot as plt
 
 from datetime import datetime, timedelta
 from pandas_market_calendars import get_calendar
-from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor, ExtraTreesRegressor
-from sklearn.model_selection import train_test_split, KFold, cross_validate
 
 polygon_api_key = "KkfCQ7fsZnx0yK4bhX9fD81QplTh0Pf3"
 calendar = get_calendar("NYSE")
