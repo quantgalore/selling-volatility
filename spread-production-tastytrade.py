@@ -85,15 +85,12 @@ ticker = "I:SPX"
 index_ticker = "I:VIX1D"
 options_ticker = "SPX"
 
-if pd.to_datetime(date).strftime("%A") == "Friday":
-    pass
-else:
-    date = trading_dates[-2]
+trading_date = datetime.now().strftime("%Y-%m-%d")
 
-underlying_data = pd.json_normalize(requests.get(f"https://api.polygon.io/v2/aggs/ticker/{ticker}/range/1/minute/{date}/{date}?adjusted=true&sort=asc&limit=50000&apiKey={polygon_api_key}").json()["results"]).set_index("t")
+underlying_data = pd.json_normalize(requests.get(f"https://api.polygon.io/v2/aggs/ticker/{ticker}/range/1/minute/{trading_date}/{trading_date}?adjusted=true&sort=asc&limit=50000&apiKey={polygon_api_key}").json()["results"]).set_index("t")
 underlying_data.index = pd.to_datetime(underlying_data.index, unit="ms", utc=True).tz_convert("America/New_York")
 
-index_data = pd.json_normalize(requests.get(f"https://api.polygon.io/v2/aggs/ticker/{index_ticker}/range/1/minute/{date}/{date}?adjusted=true&sort=asc&limit=50000&apiKey={polygon_api_key}").json()["results"]).set_index("t")
+index_data = pd.json_normalize(requests.get(f"https://api.polygon.io/v2/aggs/ticker/{index_ticker}/range/1/minute/{trading_date}/{trading_date}?adjusted=true&sort=asc&limit=50000&apiKey={polygon_api_key}").json()["results"]).set_index("t")
 index_data.index = pd.to_datetime(index_data.index, unit="ms", utc=True).tz_convert("America/New_York")
 
 index_price = index_data[index_data.index.time >= pd.Timestamp("09:35").time()]["c"].iloc[0]
@@ -101,12 +98,12 @@ price = underlying_data[underlying_data.index.time >= pd.Timestamp("09:35").time
 
 expected_move = (round((index_price / np.sqrt(252)), 2)/100)*.50
 
-exp_date = date
+exp_date = trading_date
 
 if trend_regime == 0:
 
-    valid_calls = pd.json_normalize(requests.get(f"https://api.polygon.io/v3/reference/options/contracts?underlying_ticker={options_ticker}&contract_type=call&as_of={date}&expiration_date={exp_date}&limit=1000&apiKey={polygon_api_key}").json()["results"])
-    valid_calls["days_to_exp"] = (pd.to_datetime(valid_calls["expiration_date"]) - pd.to_datetime(date)).dt.days
+    valid_calls = pd.json_normalize(requests.get(f"https://api.polygon.io/v3/reference/options/contracts?underlying_ticker={options_ticker}&contract_type=call&as_of={trading_date}&expiration_date={exp_date}&limit=1000&apiKey={polygon_api_key}").json()["results"])
+    valid_calls["days_to_exp"] = (pd.to_datetime(valid_calls["expiration_date"]) - pd.to_datetime(trading_date)).dt.days
     valid_calls["distance_from_price"] = abs(valid_calls["strike_price"] - price)
     
     upper_price = round(price + (price * expected_move))
@@ -123,8 +120,8 @@ if trend_regime == 0:
  
 elif trend_regime == 1:
     
-    valid_puts = pd.json_normalize(requests.get(f"https://api.polygon.io/v3/reference/options/contracts?underlying_ticker={options_ticker}&contract_type=put&as_of={date}&expiration_date={exp_date}&limit=1000&apiKey={polygon_api_key}").json()["results"])
-    valid_puts["days_to_exp"] = (pd.to_datetime(valid_puts["expiration_date"]) - pd.to_datetime(date)).dt.days
+    valid_puts = pd.json_normalize(requests.get(f"https://api.polygon.io/v3/reference/options/contracts?underlying_ticker={options_ticker}&contract_type=put&as_of={trading_date}&expiration_date={exp_date}&limit=1000&apiKey={polygon_api_key}").json()["results"])
+    valid_puts["days_to_exp"] = (pd.to_datetime(valid_puts["expiration_date"]) - pd.to_datetime(trading_date)).dt.days
     valid_puts["distance_from_price"] = abs(price - valid_puts["strike_price"])
     
     lower_price = round(price - (price * expected_move))
