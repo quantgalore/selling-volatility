@@ -49,19 +49,16 @@ options_ticker = "SPX"
 
 trade_list = []
 
-if pd.to_datetime(date).strftime("%A") == "Friday":
-    pass
-else:
-    date = trading_dates[-2]
+trading_date = datetime.now().strftime("%Y-%m-%d")
 
 while 1:
     
     try:
     
-        underlying_data = pd.json_normalize(requests.get(f"https://api.polygon.io/v2/aggs/ticker/{ticker}/range/1/minute/{date}/{date}?adjusted=true&sort=asc&limit=50000&apiKey={polygon_api_key}").json()["results"]).set_index("t")
+        underlying_data = pd.json_normalize(requests.get(f"https://api.polygon.io/v2/aggs/ticker/{ticker}/range/1/minute/{trading_date}/{trading_date}?adjusted=true&sort=asc&limit=50000&apiKey={polygon_api_key}").json()["results"]).set_index("t")
         underlying_data.index = pd.to_datetime(underlying_data.index, unit="ms", utc=True).tz_convert("America/New_York")
         
-        index_data = pd.json_normalize(requests.get(f"https://api.polygon.io/v2/aggs/ticker/{index_ticker}/range/1/minute/{date}/{date}?adjusted=true&sort=asc&limit=50000&apiKey={polygon_api_key}").json()["results"]).set_index("t")
+        index_data = pd.json_normalize(requests.get(f"https://api.polygon.io/v2/aggs/ticker/{index_ticker}/range/1/minute/{trading_date}/{trading_date}?adjusted=true&sort=asc&limit=50000&apiKey={polygon_api_key}").json()["results"]).set_index("t")
         index_data.index = pd.to_datetime(index_data.index, unit="ms", utc=True).tz_convert("America/New_York")
         
         index_price = index_data[index_data.index.time >= pd.Timestamp("09:35").time()]["c"].iloc[0]
@@ -72,13 +69,13 @@ while 1:
         lower_price = round(price - (price * expected_move))
         upper_price = round(price + (price * expected_move))
         
-        exp_date = date
+        exp_date = trading_date
         
         if trend_regime == 0:
             
-            valid_calls = pd.json_normalize(requests.get(f"https://api.polygon.io/v3/reference/options/contracts?underlying_ticker={options_ticker}&contract_type=call&as_of={date}&expiration_date={exp_date}&limit=1000&apiKey={polygon_api_key}").json()["results"])
+            valid_calls = pd.json_normalize(requests.get(f"https://api.polygon.io/v3/reference/options/contracts?underlying_ticker={options_ticker}&contract_type=call&as_of={trading_date}&expiration_date={exp_date}&limit=1000&apiKey={polygon_api_key}").json()["results"])
             valid_calls = valid_calls[valid_calls["ticker"].str.contains("SPXW")].copy()
-            valid_calls["days_to_exp"] = (pd.to_datetime(valid_calls["expiration_date"]) - pd.to_datetime(date)).dt.days
+            valid_calls["days_to_exp"] = (pd.to_datetime(valid_calls["expiration_date"]) - pd.to_datetime(trading_date)).dt.days
             valid_calls["distance_from_price"] = abs(valid_calls["strike_price"] - price)
             
             otm_calls = valid_calls[valid_calls["strike_price"] >= upper_price]
@@ -89,10 +86,10 @@ while 1:
             short_strike = short_call["strike_price"].iloc[0]
             long_strike = long_call["strike_price"].iloc[0]
             
-            short_call_ohlcv = pd.json_normalize(requests.get(f"https://api.polygon.io/v2/aggs/ticker/{short_call['ticker'].iloc[0]}/range/1/minute/{date}/{date}?adjusted=true&sort=asc&limit=1000&apiKey={polygon_api_key}").json()["results"]).set_index("t")
+            short_call_ohlcv = pd.json_normalize(requests.get(f"https://api.polygon.io/v2/aggs/ticker/{short_call['ticker'].iloc[0]}/range/1/minute/{trading_date}/{trading_date}?adjusted=true&sort=asc&limit=1000&apiKey={polygon_api_key}").json()["results"]).set_index("t")
             short_call_ohlcv.index = pd.to_datetime(short_call_ohlcv.index, unit = "ms", utc = True).tz_convert("America/New_York") 
             
-            long_call_ohlcv = pd.json_normalize(requests.get(f"https://api.polygon.io/v2/aggs/ticker/{long_call['ticker'].iloc[0]}/range/1/minute/{date}/{date}?adjusted=true&sort=asc&limit=1000&apiKey={polygon_api_key}").json()["results"]).set_index("t")
+            long_call_ohlcv = pd.json_normalize(requests.get(f"https://api.polygon.io/v2/aggs/ticker/{long_call['ticker'].iloc[0]}/range/1/minute/{trading_date}/{trading_date}?adjusted=true&sort=asc&limit=1000&apiKey={polygon_api_key}").json()["results"]).set_index("t")
             long_call_ohlcv.index = pd.to_datetime(long_call_ohlcv.index, unit = "ms", utc = True).tz_convert("America/New_York") 
             
             spread = pd.concat([short_call_ohlcv.add_prefix("short_call_"), long_call_ohlcv.add_prefix("long_call_")], axis = 1).dropna()
@@ -113,9 +110,9 @@ while 1:
             
         elif trend_regime == 1:
         
-            valid_puts = pd.json_normalize(requests.get(f"https://api.polygon.io/v3/reference/options/contracts?underlying_ticker={options_ticker}&contract_type=put&as_of={date}&expiration_date={exp_date}&limit=1000&apiKey={polygon_api_key}").json()["results"])
+            valid_puts = pd.json_normalize(requests.get(f"https://api.polygon.io/v3/reference/options/contracts?underlying_ticker={options_ticker}&contract_type=put&as_of={trading_date}&expiration_date={exp_date}&limit=1000&apiKey={polygon_api_key}").json()["results"])
             valid_puts = valid_puts[valid_puts["ticker"].str.contains("SPXW")].copy()
-            valid_puts["days_to_exp"] = (pd.to_datetime(valid_puts["expiration_date"]) - pd.to_datetime(date)).dt.days
+            valid_puts["days_to_exp"] = (pd.to_datetime(valid_puts["expiration_date"]) - pd.to_datetime(trading_date)).dt.days
             valid_puts["distance_from_price"] = abs(price - valid_puts["strike_price"])
             
             otm_puts = valid_puts[valid_puts["strike_price"] <= lower_price].sort_values("distance_from_price", ascending = True)
@@ -126,10 +123,10 @@ while 1:
             short_strike = short_put["strike_price"].iloc[0]
             long_strike = long_put["strike_price"].iloc[0]
     
-            short_put_ohlcv = pd.json_normalize(requests.get(f"https://api.polygon.io/v2/aggs/ticker/{short_put['ticker'].iloc[0]}/range/1/minute/{date}/{date}?adjusted=true&sort=asc&limit=1000&apiKey={polygon_api_key}").json()["results"]).set_index("t")
+            short_put_ohlcv = pd.json_normalize(requests.get(f"https://api.polygon.io/v2/aggs/ticker/{short_put['ticker'].iloc[0]}/range/1/minute/{trading_date}/{trading_date}?adjusted=true&sort=asc&limit=1000&apiKey={polygon_api_key}").json()["results"]).set_index("t")
             short_put_ohlcv.index = pd.to_datetime(short_put_ohlcv.index, unit = "ms", utc = True).tz_convert("America/New_York")   
             
-            long_put_ohlcv = pd.json_normalize(requests.get(f"https://api.polygon.io/v2/aggs/ticker/{long_put['ticker'].iloc[0]}/range/1/minute/{date}/{date}?adjusted=true&sort=asc&limit=1000&apiKey={polygon_api_key}").json()["results"]).set_index("t")
+            long_put_ohlcv = pd.json_normalize(requests.get(f"https://api.polygon.io/v2/aggs/ticker/{long_put['ticker'].iloc[0]}/range/1/minute/{trading_date}/{trading_date}?adjusted=true&sort=asc&limit=1000&apiKey={polygon_api_key}").json()["results"]).set_index("t")
             long_put_ohlcv.index = pd.to_datetime(long_put_ohlcv.index, unit = "ms", utc = True).tz_convert("America/New_York")
             
             spread = pd.concat([short_put_ohlcv.add_prefix("short_put_"), long_put_ohlcv.add_prefix("long_put_")], axis = 1).dropna()
