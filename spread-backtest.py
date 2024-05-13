@@ -51,8 +51,12 @@ for date in trading_dates[1:]:
         index_data = pd.json_normalize(requests.get(f"https://api.polygon.io/v2/aggs/ticker/{index_ticker}/range/1/minute/{date}/{date}?adjusted=true&sort=asc&limit=50000&apiKey={polygon_api_key}").json()["results"]).set_index("t")
         index_data.index = pd.to_datetime(index_data.index, unit="ms", utc=True).tz_convert("America/New_York")
         
+        etf_underlying_data = pd.json_normalize(requests.get(f"https://api.polygon.io/v2/aggs/ticker/SPY/range/1/minute/{date}/{date}?adjusted=true&sort=asc&limit=50000&apiKey={polygon_api_key}").json()["results"]).set_index("t")
+        etf_underlying_data.index = pd.to_datetime(etf_underlying_data.index, unit="ms", utc=True).tz_convert("America/New_York")
+        
         underlying_data = underlying_data[underlying_data.index.time >= pd.Timestamp("09:35").time()].copy()
         index_data = index_data[index_data.index.time >= pd.Timestamp("09:35").time()].copy()
+        etf_underlying_data = etf_underlying_data[etf_underlying_data.index.time >= pd.Timestamp("09:35").time()].copy()
         
         index_price = index_data["c"].iloc[0]        
         price = underlying_data["c"].iloc[0]
@@ -64,7 +68,13 @@ for date in trading_dates[1:]:
         
         exp_date = date
         
-        direction = big_underlying_data["regime"].iloc[-1]
+        # Pull the data at 9:35 to represent the most up-to-date regime that would be available
+        concatenated_regime_dataset = pd.concat([big_underlying_data, etf_underlying_data.head(1)], axis = 0)
+        concatenated_regime_dataset["1_mo_avg"] = concatenated_regime_dataset["c"].rolling(window=20).mean()
+        concatenated_regime_dataset["3_mo_avg"] = concatenated_regime_dataset["c"].rolling(window=60).mean()
+        concatenated_regime_dataset['regime'] = concatenated_regime_dataset.apply(lambda row: 1 if (row['1_mo_avg'] > row['3_mo_avg']) else 0, axis=1)
+        
+        direction = concatenated_regime_dataset["regime"].iloc[-1]
 
         if direction == 0:
             
