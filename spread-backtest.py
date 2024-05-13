@@ -72,7 +72,7 @@ for date in trading_dates[1:]:
         concatenated_regime_dataset = pd.concat([big_underlying_data, etf_underlying_data.head(1)], axis = 0)
         concatenated_regime_dataset["1_mo_avg"] = concatenated_regime_dataset["c"].rolling(window=20).mean()
         concatenated_regime_dataset["3_mo_avg"] = concatenated_regime_dataset["c"].rolling(window=60).mean()
-        concatenated_regime_dataset['regime'] = concatenated_regime_dataset.apply(lambda row: 1 if (row['1_mo_avg'] > row['3_mo_avg']) else 0, axis=1)
+        concatenated_regime_dataset['regime'] = concatenated_regime_dataset.apply(lambda row: 1 if (row['c'] > row['1_mo_avg']) else 0, axis=1)
         
         direction = concatenated_regime_dataset["regime"].iloc[-1]
 
