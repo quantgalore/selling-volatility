@@ -171,11 +171,14 @@ long_option_quote = pd.json_normalize(requests.get(f"https://api.polygon.io/v3/q
 long_option_quote.index = pd.to_datetime(long_option_quote.index, unit = "ns", utc = True).tz_convert("America/New_York")
 
 natural_price = round(short_option_quote["bid_price"].iloc[0] - long_option_quote["ask_price"].iloc[0], 2)
+mid_price = round(((short_option_quote["bid_price"].iloc[0] + short_option_quote["ask_price"].iloc[0]) / 2) - ((long_option_quote["bid_price"].iloc[0] + long_option_quote["ask_price"].iloc[0]) / 2), 2)
+
+optimal_price = np.int64((mid_price - .05) / .05) * .05
 
 order_details = {
     "time-in-force": "Day",
     "order-type": "Limit",
-    "price": natural_price,
+    "price": optimal_price,
     "price-effect": "Credit",
     "legs": [{"action": "Buy to Open",
           "instrument-type": "Equity Option",
@@ -192,7 +195,7 @@ order_details = {
 # Do an order dry-run to make sure the trade will go through (i.e., verifies balance, valid symbol, etc. )
 
 validate_order = requests.post(f"https://api.tastyworks.com/accounts/{account_number}/orders/dry-run", json = order_details, headers = {'Authorization': session_token})
-validation_text = validate_order.json()
+validation_text = validate_order.text
 
 submit_order = requests.post(f"{base_url}/accounts/{account_number}/orders", json = order_details, headers = {'Authorization': session_token})
-order_submission_text = submit_order.json()
+order_submission_text = submit_order.text
