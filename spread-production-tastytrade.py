@@ -173,7 +173,7 @@ long_option_quote.index = pd.to_datetime(long_option_quote.index, unit = "ns", u
 natural_price = round(short_option_quote["bid_price"].iloc[0] - long_option_quote["ask_price"].iloc[0], 2)
 mid_price = round(((short_option_quote["bid_price"].iloc[0] + short_option_quote["ask_price"].iloc[0]) / 2) - ((long_option_quote["bid_price"].iloc[0] + long_option_quote["ask_price"].iloc[0]) / 2), 2)
 
-optimal_price = np.int64((mid_price - .05) / .05) * .05
+optimal_price = round(np.int64(round((mid_price - .05) / .05, 2)) * .05, 2)
 
 order_details = {
     "time-in-force": "Day",
