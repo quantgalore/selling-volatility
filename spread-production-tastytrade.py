@@ -103,6 +103,7 @@ exp_date = trading_date
 if trend_regime == 0:
 
     valid_calls = pd.json_normalize(requests.get(f"https://api.polygon.io/v3/reference/options/contracts?underlying_ticker={options_ticker}&contract_type=call&as_of={trading_date}&expiration_date={exp_date}&limit=1000&apiKey={polygon_api_key}").json()["results"])
+    valid_calls = valid_calls[valid_calls["ticker"].str.contains("SPXW")].copy()
     valid_calls["days_to_exp"] = (pd.to_datetime(valid_calls["expiration_date"]) - pd.to_datetime(trading_date)).dt.days
     valid_calls["distance_from_price"] = abs(valid_calls["strike_price"] - price)
     
@@ -121,6 +122,7 @@ if trend_regime == 0:
 elif trend_regime == 1:
     
     valid_puts = pd.json_normalize(requests.get(f"https://api.polygon.io/v3/reference/options/contracts?underlying_ticker={options_ticker}&contract_type=put&as_of={trading_date}&expiration_date={exp_date}&limit=1000&apiKey={polygon_api_key}").json()["results"])
+    valid_puts = valid_puts[valid_puts["ticker"].str.contains("SPXW")].copy()
     valid_puts["days_to_exp"] = (pd.to_datetime(valid_puts["expiration_date"]) - pd.to_datetime(trading_date)).dt.days
     valid_puts["distance_from_price"] = abs(price - valid_puts["strike_price"])
     
