@@ -143,7 +143,7 @@ elif trend_regime == 1:
 # Pulling the option via Tastytrade    
 # =============================================================================
 
-option_url = f"https://api.tastyworks.com/option-chains/SPX/nested"
+option_url = f"https://api.tastyworks.com/option-chains/SPXW/nested"
 
 option_chain = pd.json_normalize(requests.get(option_url,  headers = {'Authorization': session_token}).json()["data"]["items"][0]["expirations"][0]["strikes"])
 option_chain["strike_price"] = option_chain["strike-price"].astype(float)
